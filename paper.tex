@@ -1,0 +1,305 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{ASTrA: Adversarial Self-Supervised Training with Adaptive Attacks and Vision Transformers}
+
+\author{\IEEEauthorblockN{1\textsuperscript{st} Given Name Surname}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)}\\
+City, Country \\
+email address or ORCID}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Given Name Surname}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)}\\
+City, Country \\
+email address or ORCID}
+\and
+\IEEEauthorblockN{3\textsuperscript{rd} Given Name Surname}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)}\\
+City, Country \\
+email address or ORCID}
+\and
+\IEEEauthorblockN{4\textsuperscript{th} Given Name Surname}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)}\\
+City, Country \\
+email address or ORCID}
+\and
+\IEEEauthorblockN{5\textsuperscript{th} Given Name Surname}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)}\\
+City, Country \\
+email address or ORCID}
+\and
+\IEEEauthorblockN{6\textsuperscript{th} Given Name Surname}
+\IEEEauthorblockA{\textit{dept. name of organization (of Aff.)} \\
+\textit{name of organization (of Aff.)}\\
+City, Country \\
+email address or ORCID}
+}
+
+\maketitle
+
+\begin{abstract}
+Adversarial training is one of the most effective defenses against adversarial attacks, yet most self-supervised robust learning methods rely on fixed or hand-crafted attack strategies that do not adapt as the model evolves during training. In this work, we present ASTrA (Adversarial Self-supervised Training with Adaptive Attacks), a framework that combines contrastive self-supervised learning with a reinforcement learning-based strategy network to dynamically generate per-sample adversarial perturbations. The strategy network, trained via REINFORCE, selects instance-specific attack parameters including perturbation budget, number of attack iterations, and step size, enabling the training procedure to continuously calibrate attack difficulty throughout the learning process. We employ a dual normalization mechanism that maintains separate normalization statistics for clean and adversarial data paths. Furthermore, we extend the framework from its original ResNet-18 backbone to a Vision Transformer (ViT-Small) architecture with dual LayerNorm, investigating how adaptive adversarial training transfers to transformer-based encoders. The framework is evaluated on CIFAR-10 using standard linear finetuning, adversarial linear finetuning, and adversarial full finetuning protocols, with robustness assessed under AutoAttack.
+\end{abstract}
+
+\begin{IEEEkeywords}
+adversarial robustness, self-supervised learning, contrastive learning, vision transformers, reinforcement learning
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+Modern deep learning systems have achieved remarkable success across high-impact domains, yet their vulnerability to adversarial examples remains a major barrier to trustworthy deployment. Although adversarial training is widely regarded as one of the strongest empirical defenses, many self-supervised robust learning methods still rely on fixed or hand-crafted attack policies that do not adapt as the encoder evolves during training \cite{b1,b2,b3,b4,b5}. This limitation becomes more pronounced in dynamic learning settings, where samples exhibit different sensitivities to perturbations and where static attack schedules can underfit hard examples or over-regularize easy ones \cite{b5}.
+
+To address these gaps, our project extends adaptive adversarial training beyond conventional settings by incorporating stronger evaluation protocols and model diversity \cite{b5}. In particular, we investigate how learnable or adaptive attack strategies can be combined with transformer-based architectures, an important direction given recent evidence that vision transformers require tailored adversarial training recipes rather than direct reuse of CNN-oriented settings \cite{b6}. By moving from fixed defenses toward a dynamic, data-driven training procedure, the proposed framework aims to improve alignment between clean and adversarial representations while scaling more effectively across architectures and threat models \cite{b1,b2,b3}.
+
+\section{Objectives and Research Questions}
+
+This section outlines the key objectives and research questions that guide our study of adversarial self-supervised training using adaptive attacks.
+
+\subsection{Objectives}
+
+The main objectives of this project are as follows:
+
+\begin{itemize}
+    \item To develop an adaptive adversarial training framework that dynamically generates per-sample attack parameters using reinforcement learning, rather than relying on fixed attack schedules.
+
+    \item To extend the ASTrA framework from convolutional architectures (ResNet-18) to Vision Transformers (ViT-Small) with dual normalization support, investigating how adaptive adversarial training transfers across fundamentally different encoder designs.
+
+    \item To evaluate model robustness under rigorous adversarial benchmarks including AutoAttack, going beyond standard PGD-based evaluation.
+\end{itemize}
+
+\subsection{Research Questions}
+
+Based on the above objectives, the following research questions are formulated:
+
+\begin{itemize}
+    \item How does the adaptive attack strategy, learned via reinforcement learning, compare to fixed-parameter adversarial training in terms of both clean accuracy and adversarial robustness?
+
+    \item What is the effect of per-sample attack parameter selection (epsilon, iterations, step size) versus uniform attack parameters across all training samples?
+
+    \item How does the dual normalization mechanism (separate statistics for clean and adversarial paths) affect the alignment between clean and adversarial feature representations?
+
+    \item Does the Vision Transformer architecture, when combined with adaptive adversarial training, exhibit different robustness characteristics compared to the ResNet-18 backbone?
+\end{itemize}
+
+\section{Related Work}
+
+The vulnerability of neural networks to adversarial examples was first demonstrated by Szegedy et al. \cite{b7}, which sparked extensive research into both attack methods and defenses. Madry et al. \cite{b8} proposed Projected Gradient Descent (PGD)-based adversarial training, which remains one of the strongest empirical defenses. However, traditional adversarial training methods rely on fixed, hand-crafted attack strategies that may not generalize well across different models and datasets.
+
+In parallel, self-supervised learning methods such as SimCLR \cite{b9} have demonstrated that models can learn strong visual representations without labeled data through contrastive learning. This has motivated research at the intersection of self-supervision and adversarial robustness. Adversarial Contrastive Learning (ACL) by Jiang et al. \cite{b4} and RoCL by Kim et al. \cite{b2} incorporate adversarial perturbations into contrastive learning frameworks to improve robustness in a self-supervised setting. Naseer et al. \cite{b1} and Chen et al. \cite{b3} further explored how self-supervised pre-training can serve as a foundation for adversarially robust fine-tuning.
+
+However, these methods depend on heuristic or static attack strategies, limiting their adaptability to changing model dynamics and instance-specific variations. To address this, LAS-AT \cite{b5} introduced a learnable attack strategy optimized via reinforcement learning for supervised adversarial training, demonstrating that adaptive attacks can improve robustness. ASTrA extends this idea to the self-supervised contrastive learning setting, where attack parameters are adapted without access to labels.
+
+Despite this progress, most prior work has focused on convolutional neural networks, with limited exploration of transformer-based architectures. Vision Transformers (ViT) \cite{b10} exhibit different robustness characteristics than CNNs, and recent work by Mo et al. \cite{b6} has shown that adversarial training recipes for ViTs require careful adaptation. Furthermore, robustness evaluation is often limited to standard PGD attacks, while stronger benchmarks such as AutoAttack \cite{b11} and Square Attack \cite{b12} provide more reliable assessment. These gaps motivate the extension of adaptive adversarial training to transformer architectures with rigorous evaluation, which forms the basis of this work.
+
+\section{Methodology}
+
+This section describes the technical components of the ASTrA framework. The method consists of a contrastive self-supervised learning objective, an adaptive strategy network trained with reinforcement learning, per-sample adversarial attack generation, and a dual normalization mechanism. We describe each component in detail, followed by the complete training procedure and the extension to the Vision Transformer architecture.
+
+\subsection{Contrastive Learning Framework}
+
+ASTrA builds upon the SimCLR \cite{b9} contrastive learning framework. Given a batch of $N$ images, two augmented views are generated for each image using stochastic data augmentation, producing $2N$ augmented samples. The augmentation pipeline consists of random resized cropping to $32 \times 32$ pixels (scale range $[0.1, 1.0]$), random horizontal flipping, random color jitter (brightness, contrast, saturation, and hue with factors $0.4, 0.4, 0.4, 0.1$ applied with probability $0.8$), and random grayscale conversion with probability $0.2$.
+
+Both augmented views are passed through an encoder network $f(\cdot)$ followed by a projection head $g(\cdot)$ to obtain feature representations. The training objective is the Normalized Temperature-scaled Cross-Entropy (NT-Xent) loss:
+
+\begin{equation}
+\mathcal{L}_{\text{NT-Xent}} = -\frac{1}{2N} \sum_{i=1}^{2N} \log \frac{\exp(\text{sim}(z_i, z_{i^+}) / \tau)}{\sum_{k \neq i} \exp(\text{sim}(z_i, z_k) / \tau)}
+\end{equation}
+
+\noindent where $z_i = g(f(x_i))$ is the projected representation, $i^+$ denotes the positive pair index, $\text{sim}(\cdot, \cdot)$ is cosine similarity, and $\tau = 0.5$ is the temperature parameter.
+
+The total training loss for the main encoder combines three contrastive terms:
+
+\begin{equation}
+\mathcal{L}_{\text{total}} = \frac{\mathcal{L}_{\text{clean}} + \mathcal{L}_{\text{adv}}}{2} + \lambda_{\text{sim}} \cdot \mathcal{L}_{\text{sim}}
+\end{equation}
+
+\noindent where $\mathcal{L}_{\text{clean}}$ is the NT-Xent loss computed on clean features, $\mathcal{L}_{\text{adv}}$ is the NT-Xent loss computed on adversarial features, and $\mathcal{L}_{\text{sim}}$ is a cross-view similarity loss computed by stacking clean and adversarial features and applying NT-Xent over the combined set. The weight $\lambda_{\text{sim}}$ controls the contribution of the similarity term.
+
+\subsection{Adaptive Strategy Network}
+
+A key contribution of ASTrA is the use of a separate strategy network $\pi_\theta$ that learns to select per-sample adversarial attack parameters during training. Unlike fixed-parameter methods that apply the same perturbation budget and attack iterations to all samples, the strategy network observes each input image and outputs a tailored attack configuration.
+
+The strategy network is a lightweight Vision Transformer with embedding dimension 192, 6 transformer layers, and 3 attention heads. It takes the augmented input images and produces three categorical probability distributions over discrete action spaces:
+
+\begin{itemize}
+    \item \textbf{Perturbation budget} $\epsilon \in \{3, 4, \ldots, 15\}$ (in pixel values, normalized by $1/255$)
+    \item \textbf{Attack iterations} $K \in \{3, 4, \ldots, 14\}$
+    \item \textbf{Step size} $\alpha \in \{1, 2, 3, 4, 5\}$ (in pixel values, normalized by $1/255$)
+\end{itemize}
+
+For each input sample, the strategy network samples actions from these distributions:
+
+\begin{equation}
+a_i^{(j)} \sim \text{Categorical}(\text{softmax}(\pi_\theta^{(j)}(x_i))), \quad j \in \{\epsilon, K, \alpha\}
+\end{equation}
+
+The strategy network is optimized using the REINFORCE algorithm \cite{b13}. After generating adversarial examples using the selected parameters and computing the resulting losses, a reward signal is computed:
+
+\begin{equation}
+R = \frac{-r_1 \cdot \mathcal{L}_{\text{sim}} + r_2 \cdot \mathcal{L}_{\text{adv}} - r_3 \cdot \mathcal{L}_{\text{clean}}}{3}
+\end{equation}
+
+\noindent where $r_1$, $r_2$, and $r_3$ are weighting coefficients. The reward encourages the strategy network to select attack parameters that maximize the adversarial contrastive loss (making attacks harder) while minimizing the clean contrastive loss (maintaining good clean representations) and reducing similarity between clean and adversarial features. The policy gradient update is:
+
+\begin{equation}
+\nabla_\theta J = -\sum_{t} \log \pi_\theta(a_t | s_t) \cdot R_t
+\end{equation}
+
+\noindent with gradient clipping at a maximum norm of 1.0.
+
+\subsection{Per-Sample Adaptive PGD Attack}
+
+Given the attack parameters selected by the strategy network, adversarial examples are generated using a modified Projected Gradient Descent (PGD) procedure that supports per-sample attack configurations. For each sample $x_i$ in the batch, the attack is parameterized by its own $(\epsilon_i, K_i, \alpha_i)$:
+
+\begin{enumerate}
+    \item Initialize perturbation: $\delta_i^{(0)} \sim \mathcal{U}(-\epsilon_i, \epsilon_i)$
+    \item For each iteration $t = 1, \ldots, K_i$:
+    \begin{equation}
+    \delta_i^{(t)} = \Pi_{\|\delta\|_\infty \leq \epsilon_i} \left( \delta_i^{(t-1)} + \alpha_i \cdot \text{sign}(\nabla_\delta \mathcal{L}_{\text{NT-Xent}}(f(x_i + \delta_i^{(t-1)}))) \right)
+    \end{equation}
+    \item Return adversarial example: $x_i^{\text{adv}} = x_i + \delta_i^{(K_i)}$
+\end{enumerate}
+
+Since samples within the same batch have different numbers of attack iterations, a masking mechanism is employed: a binary mask tracks which samples still have remaining iterations, and gradient updates are applied only to active samples. This enables efficient batched computation despite variable-length attacks.
+
+\subsection{Dual Normalization Mechanism}
+
+ASTrA maintains separate normalization statistics for clean and adversarial data paths. This is motivated by the observation that clean and adversarial examples have different feature distributions, and sharing normalization parameters can degrade performance on both.
+
+In the ResNet-18 backbone, this is implemented as dual Batch Normalization, where each normalization layer maintains two sets of running statistics indexed by a mode identifier (\texttt{normal} for clean data, \texttt{pgd} for adversarial data). In the ViT-Small backbone, the same principle is realized through dual Layer Normalization, where each LayerNorm in the transformer blocks and projection head is replaced with a routing module that selects between two independent LayerNorm instances based on the input mode.
+
+During training, clean images are forwarded through the \texttt{normal} normalization path while adversarial images use the \texttt{pgd} path. This separation allows each path to learn statistics appropriate to its input distribution.
+
+\subsection{Encoder Architectures}
+
+\subsubsection{ResNet-18 Backbone}
+The original ASTrA framework uses a ResNet-18 encoder modified for CIFAR-10 (initial $3 \times 3$ convolution with stride 1, no max pooling) with dual Batch Normalization. The encoder produces 512-dimensional features, which are mapped through a three-layer projection head: Linear$(512 \rightarrow 2048)$ $\rightarrow$ BN $\rightarrow$ ReLU $\rightarrow$ Linear$(2048 \rightarrow 512)$ $\rightarrow$ BN $\rightarrow$ ReLU $\rightarrow$ Linear$(512 \rightarrow 512)$ $\rightarrow$ BN.
+
+\subsubsection{Vision Transformer Backbone}
+We extend ASTrA to a ViT-Small encoder with the following configuration: embedding dimension 384, 12 transformer layers, 6 attention heads, MLP expansion ratio of 4 (hidden dimension 1536), and patch size $4 \times 4$. For $32 \times 32$ CIFAR-10 images, this produces 64 patch tokens plus one learnable \texttt{[CLS]} token, with learnable positional embeddings of size $65 \times 384$. The \texttt{[CLS]} token output serves as the image representation.
+
+The projection head follows the same structure adapted for the 384-dimensional features: Linear$(384 \rightarrow 1536)$ $\rightarrow$ LN $\rightarrow$ ReLU $\rightarrow$ Linear$(1536 \rightarrow 384)$ $\rightarrow$ LN $\rightarrow$ ReLU $\rightarrow$ Linear$(384 \rightarrow 384)$ $\rightarrow$ LN, where all LayerNorm (LN) layers use the dual normalization routing mechanism.
+
+The corresponding strategy network is a smaller ViT with embedding dimension 192, 6 layers, and 3 attention heads, keeping the parameter count manageable.
+
+\subsection{Training Procedure}
+
+Training alternates between updating the strategy network and the main encoder. The strategy network is updated every $M$ batches (default $M = 10$) using the REINFORCE algorithm, while the main encoder is updated every batch.
+
+\begin{algorithm}
+\caption{ASTrA Training Procedure}
+\begin{algorithmic}[1]
+\REQUIRE Main encoder $f_\phi$ with projection head $g_\phi$, strategy network $\pi_\theta$, training data $\mathcal{D}$, update interval $M$
+\FOR{each epoch}
+\FOR{each mini-batch $\mathcal{B} = \{x_1, \ldots, x_N\}$, step $t$}
+\STATE Generate augmented pairs $(x_i^{(1)}, x_i^{(2)})$ for each $x_i$
+\IF{$t \mod M = 0$ and $t > 0$}
+    \STATE \textit{// Update strategy network}
+    \STATE Set $f_\phi$ to eval mode, $\pi_\theta$ to train mode
+    \STATE Sample actions: $(\epsilon_i, K_i, \alpha_i) \sim \pi_\theta(x_i)$
+    \STATE Generate adversarial examples via adaptive PGD
+    \STATE Compute reward $R$ using Eq. (4)
+    \STATE Update $\theta$ via REINFORCE (Eq. 5)
+\ENDIF
+\STATE \textit{// Update main encoder}
+\STATE Set $f_\phi$ to train mode, $\pi_\theta$ to eval mode
+\STATE Sample actions: $(\epsilon_i, K_i, \alpha_i) \sim \pi_\theta(x_i)$
+\STATE Generate adversarial examples $x_i^{\text{adv}}$ via adaptive PGD
+\STATE Compute $z_i^{\text{clean}} = g_\phi(f_\phi(x_i, \texttt{normal}))$
+\STATE Compute $z_i^{\text{adv}} = g_\phi(f_\phi(x_i^{\text{adv}}, \texttt{pgd}))$
+\STATE Compute $\mathcal{L}_{\text{total}}$ using Eq. (2)
+\STATE Update $\phi$ via LARS optimizer
+\ENDFOR
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+The main encoder is optimized using the LARS optimizer with a base learning rate of 5.0, weight decay of $10^{-6}$, and momentum of 0.9. A cosine annealing schedule is applied with 10 epochs of linear warmup. The strategy network uses the same optimizer with a separate learning rate. Training runs for 1000 epochs on CIFAR-10 with a batch size of 256.
+
+\subsection{Evaluation Protocols}
+
+After self-supervised pre-training, the learned representations are evaluated through three downstream protocols:
+
+\begin{itemize}
+    \item \textbf{Standard Linear Finetuning (SLF):} A linear classifier is trained on top of frozen encoder features using clean data and cross-entropy loss.
+
+    \item \textbf{Adversarial Linear Finetuning (ALF):} A linear classifier is trained on frozen encoder features using PGD-generated adversarial examples ($\epsilon = 8/255$, step size $2/255$, 10 iterations).
+
+    \item \textbf{Adversarial Full Finetuning (AFF):} The entire encoder and classifier are finetuned using the TRADES loss with dual normalization active, allowing both the encoder and the normalization statistics to adapt.
+\end{itemize}
+
+Robustness is assessed using AutoAttack \cite{b11}, an ensemble of diverse attacks including APGD-CE, APGD-DLR, FAB, and Square Attack, under the $\ell_\infty$ threat model with $\epsilon = 8/255$.
+
+
+\begin{thebibliography}{00}
+
+\bibitem{b1} M. Naseer, S. Khan, M. Hayat, F. S. Khan, and F. Porikli,
+``A Self-supervised Approach for Adversarial Robustness,''
+in \textit{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, pp. 262--271, 2020.
+
+\bibitem{b2} M. Kim, J. Tack, and S. J. Hwang,
+``Adversarial Self-supervised Contrastive Learning,''
+in \textit{Adv. Neural Inf. Process. Syst. (NeurIPS)}, 2020.
+
+\bibitem{b3} T. Chen, S. Liu, S. Chang, Y. Cheng, L. Amini, and Z. Wang,
+``Adversarial Robustness: From Self-Supervised Pre-Training to Fine-Tuning,''
+in \textit{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, pp. 699--708, 2020.
+
+\bibitem{b4} Z. Jiang, T. Chen, T. Chen, and Z. Wang,
+``Robust Pre-Training by Adversarial Contrastive Learning,''
+in \textit{Adv. Neural Inf. Process. Syst. (NeurIPS)}, 2020.
+
+\bibitem{b5} X. Jia, Y. Zhang, B. Wu, K. Ma, J. Wang, and X. Cao,
+``LAS-AT: Adversarial Training With Learnable Attack Strategy,''
+in \textit{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, pp. 13398--13408, 2022.
+
+\bibitem{b6} Y. Mo et al.,
+``When Adversarial Training Meets Vision Transformers: Recipes from Training to Architecture,''
+in \textit{Adv. Neural Inf. Process. Syst. (NeurIPS)}, 2022.
+
+\bibitem{b7} C. Szegedy et al.,
+``Intriguing properties of neural networks,''
+\textit{arXiv preprint arXiv:1312.6199}, 2013.
+
+\bibitem{b8} A. Madry, A. Makelov, L. Schmidt, D. Tsipras, and A. Vladu,
+``Towards deep learning models resistant to adversarial attacks,''
+in \textit{Proc. ICLR}, 2018.
+
+\bibitem{b9} T. Chen, S. Kornblith, M. Norouzi, and G. Hinton,
+``A simple framework for contrastive learning of visual representations,''
+in \textit{Proc. ICML}, 2020.
+
+\bibitem{b10} A. Dosovitskiy et al.,
+``An image is worth 16x16 words: Transformers for image recognition at scale,''
+in \textit{Proc. ICLR}, 2021.
+
+\bibitem{b11} F. Croce and M. Hein,
+``Reliable evaluation of adversarial robustness with AutoAttack,''
+in \textit{Proc. ICML}, 2020.
+
+\bibitem{b12} M. Andriushchenko, F. Croce, N. Flammarion, and M. Hein,
+``Square attack: A query-efficient black-box adversarial attack via random search,''
+in \textit{Proc. ECCV}, 2020.
+
+\bibitem{b13} R. J. Williams,
+``Simple statistical gradient-following algorithms for connectionist reinforcement learning,''
+\textit{Machine Learning}, vol. 8, no. 3--4, pp. 229--256, 1992.
+
+\end{thebibliography}
+
+\end{document}
