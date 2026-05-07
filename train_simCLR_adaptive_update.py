@@ -301,7 +301,7 @@ def main():
 
     start_epoch = 1
     if args.checkpoint != '':
-        checkpoint = torch.load(args.checkpoint)
+        checkpoint = torch.load(args.checkpoint, weights_only=False)
         if 'state_dict' in checkpoint:
             model.load_state_dict(checkpoint['state_dict'])
         else:
@@ -312,7 +312,7 @@ def main():
 
     if args.resume:
         if args.checkpoint == '':
-            checkpoint = torch.load(os.path.join(save_dir, 'model_both.pt'))
+            checkpoint = torch.load(os.path.join(save_dir, 'model_both.pt'), weights_only=False)
             if 'state_dict' in checkpoint:
                 new_state_dict = {}
                 for k, v in checkpoint['state_dict'].items():

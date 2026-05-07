@@ -12,9 +12,9 @@ export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
 # Reduce memory fragmentation on small-VRAM GPUs (e.g. A2000 12GB)
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-python "$SCRIPT_DIR/train_simCLR_adaptive_update.py" \
+python3 "$SCRIPT_DIR/train_simCLR_adaptive_update.py" \
     --experiment ASTrA_ViT_Training \
-    --batch_size 64 \
+    --batch_size 128 \
     --interval_num 10 \
     --r1 0 \
     --sim_weight 0.5 \
